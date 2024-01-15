@@ -1,8 +1,44 @@
 import os
-from decimal import Decimal, ROUND_DOWN
 
 from django.db import models
-from django.utils.translation import gettext_lazy as _
+
+
+class BaseFinancialModel(models.Model):
+    start_balance_active_value = models.DecimalField(
+        verbose_name="Значение: Входящее сальдо | Актив ",
+        max_digits=40, decimal_places=2, default=0,
+    )
+    start_balance_passive_value = models.DecimalField(
+        verbose_name="Значение: Входящее сальдо | Пассив ",
+        max_digits=40, decimal_places=2, default=0,
+    )
+    turnover_debit_value = models.DecimalField(
+        verbose_name="Значение: Обороты | Дебит ",
+        max_digits=40, decimal_places=2, default=0,
+    )
+    turnover_credit_value = models.DecimalField(
+        verbose_name="Значение: Обороты | Кредит ",
+        max_digits=40, decimal_places=2, default=0,
+    )
+    end_balance_active_value = models.DecimalField(
+        verbose_name="Значение: Исходящее сальдо | Актив ",
+        max_digits=40, decimal_places=2, default=0,
+        help_text='Расчитывается автоматически после сохранения'
+    )
+    end_balance_passive_value = models.DecimalField(
+        verbose_name="Итоговое значение: : Исходящее сальдо | Пассив ",
+        max_digits=40, decimal_places=2, default=0,
+        help_text='Расчитывается автоматически после сохранения'
+    )
+
+    class Meta:
+        abstract = True
+
+    def calculate_end_balance_active_value(self):
+        return self.start_balance_active_value + (self.turnover_debit_value - self.turnover_credit_value)
+
+    def calculate_end_balance_passive_value(self):
+        return self.start_balance_passive_value + (self.turnover_credit_value - self.turnover_debit_value)
 
 
 class Bank(models.Model):
@@ -18,7 +54,7 @@ class Bank(models.Model):
         return self.name
 
 
-class BalanceSheet(models.Model):
+class BalanceSheet(BaseFinancialModel):
     start_period = models.DateField('Начало отчета', auto_now=False)
     end_period = models.DateField('Конец отчета', auto_now=False)
     bank = models.ForeignKey(
@@ -43,7 +79,7 @@ class BalanceSheet(models.Model):
         return f"Балансовая ведомость банка: {self.bank} из файла {os.path.basename(self.file.name)}"
 
 
-class FinancialClass(models.Model):
+class FinancialClass(BaseFinancialModel):
 
     number = models.SmallIntegerField('Номер класса')
     name = models.CharField(max_length=100, verbose_name="Наименование класса")
@@ -67,7 +103,7 @@ class FinancialClass(models.Model):
         return f'Класс {self.number} {self.name} в {self.balance_sheet}'
 
 
-class BankAccount(models.Model):
+class BankAccount(BaseFinancialModel):
     code = models.CharField(
         max_length=4, verbose_name="Код счета"
     )
@@ -87,151 +123,50 @@ class BankAccount(models.Model):
             )
         ]
 
-    def __str__(self):
-        return f'{self.code} для {self.financial_class}'
-
-
-class FinancialGroup(models.Model):
-
-    class GroupName(models.TextChoices):
-        '''Имя группы.'''
-
-        START_BALANCE = 'Входящее сальдо', _('Входящее сальдо')
-        TURNOVER = 'Обороты', _('Обороты')
-        END_BALANCE = 'Исходящее сальдо', _('Исходящее сальдо')
-
-    name = models.CharField(
-        'Имя группы', max_length=30, choices=GroupName.choices
-    )
-    balance_sheet = models.ForeignKey(
-        BalanceSheet, on_delete=models.CASCADE,
-        verbose_name="Балансовая ведомость", related_name='financial_groups'
-    )
-
-    class Meta:
-        verbose_name = "Финансовая группа"
-        verbose_name_plural = "Финансовые группы"
-
-    def __str__(self):
-        return f'{self.name} в {self.balance_sheet}'
-
-
-class FinancialSubtype(models.Model):
-
-    class SubtypeName(models.TextChoices):
-        '''Имя подгруппы.'''
-
-        ACTIVE = 'Актив', _('Актив')
-        PASSIVE = 'Пассив', _('Пассив')
-        DEBIT = 'Дебит', _('Дебит')
-        CREDIT = 'Кредит', _('Кредит')
-
-    name = models.CharField(
-        'Имя подгруппы', max_length=30, choices=SubtypeName.choices
-    )
-    financial_group = models.ForeignKey(
-        FinancialGroup, on_delete=models.CASCADE,
-        verbose_name="Финансовая группа", related_name='financial_subtypes'
-    )
-
-    class Meta:
-        verbose_name = "Финансовая подгруппа"
-        verbose_name_plural = "Финансовые подгруппы"
-        ordering = ('id',)
-
-    def __str__(self):
-        return f'{self.name} | {self.financial_group}'
-
-
-class FinancialStatement(models.Model):
-    value = models.DecimalField(
-        verbose_name="Значение", max_digits=40, decimal_places=2
-    )
-    financial_subtype = models.ForeignKey(
-        FinancialSubtype, on_delete=models.CASCADE,
-        verbose_name="Финансовая подгруппа",
-        related_name='financial_statements')
-    bank_account = models.ForeignKey(
-        BankAccount, on_delete=models.CASCADE,
-        verbose_name="Банковский счет",
-        related_name='financial_statements')
-
-    class Meta:
-        verbose_name = "Финансовая отчетность"
-        verbose_name_plural = "Финансовые отчетности"
-        ordering = ('financial_subtype',)
-        constraints = [
-            models.UniqueConstraint(
-                fields=['value', 'financial_subtype', 'bank_account'],
-                name='uniq_financial_statement'
+    def calculate_end_balance_active_value(self):
+        end_balance_active_value = self.start_balance_active_value + (
+                self.turnover_debit_value - self.turnover_credit_value
             )
-        ]
+        return end_balance_active_value
+
+    def calculate_end_balance_passive_value(self):
+        end_balance_passive_value = self.start_balance_passive_value + (
+                self.turnover_credit_value - self.turnover_debit_value
+            )
+        return end_balance_passive_value
+
+    def calculate_news_total_values(self, news_values_in_fields):
+        news_total_values = []
+        for field in news_values_in_fields:
+            news_total_values.append(sum(getattr(account, field) for account in self.financial_class.bank_accounts.all()))
+        return news_total_values
+
+    def get_changed_fields(self):
+        if self.pk:
+            prev_obj = BankAccount.objects.get(id=self.pk)
+            return [field.name for field in self._meta.fields if getattr(self, field.name) != getattr(prev_obj, field.name)]
+        return [field.name for field in self._meta.fields if field.name not in ['id', 'code', 'financial_class']]
 
     def save(self, *args, **kwargs):
-        if self.financial_subtype.financial_group.name != FinancialGroup.GroupName.END_BALANCE.value:
-            if self.financial_subtype.name == FinancialSubtype.SubtypeName.ACTIVE:
-                name_financial_group = FinancialSubtype.SubtypeName.ACTIVE
-            if self.financial_subtype.name == FinancialSubtype.SubtypeName.PASSIVE:
-                name_financial_group = FinancialSubtype.SubtypeName.PASSIVE
-            # if self.financial_subtype.name == FinancialSubtype.SubtypeName.CREDIT:
-            #     name_financial_group = FinancialSubtype.SubtypeName.ACTIVE
-            if self.value == 0:
-                value = 0
-            else:
-                turnover_financial_group, _ = FinancialGroup.objects.get_or_create(
-                    name=FinancialGroup.GroupName.TURNOVER.value,
-                    balance_sheet=self.bank_account.financial_class.balance_sheet
-                )
-                debit_financial_subtype, _ = FinancialSubtype.objects.get_or_create(
-                    name=FinancialSubtype.SubtypeName.DEBIT.value,
-                    financial_group=turnover_financial_group
-                )
-                credit_financial_subtype, _ = FinancialSubtype.objects.get_or_create(
-                    name=FinancialSubtype.SubtypeName.CREDIT.value,
-                    financial_group=turnover_financial_group
-                )
-                debit_value = FinancialStatement.objects.filter(
-                    financial_subtype=debit_financial_subtype,
-                    bank_account=self.bank_account
-                ).first()
-                if debit_value:
-                    debit_value = debit_value.value
-                else:
-                    debit_value = 0
-                credit_value = FinancialStatement.objects.filter(
-                    financial_subtype=credit_financial_subtype,
-                    bank_account=self.bank_account
-                ).first()
-                if credit_value:
-                    credit_value = credit_value.value
-                else:
-                    credit_value = 0
-                value = self.value + (debit_value - credit_value)
-            financial_group, _ = FinancialGroup.objects.get_or_create(
-                name=FinancialGroup.GroupName.END_BALANCE.value,
-                balance_sheet=self.bank_account.financial_class.balance_sheet
+        if self.start_balance_active_value != 0:
+            self.end_balance_active_value = (
+                self.calculate_end_balance_active_value()
             )
-
-            financial_subtype, _ = FinancialSubtype.objects.get_or_create(
-                name=name_financial_group,
-                financial_group=financial_group
+            self.end_balance_passive_value = 0
+        else:
+            self.end_balance_passive_value = (
+                self.calculate_end_balance_passive_value()
             )
-            if not self.pk:
-                FinancialStatement.objects.create(
-                    value=value,
-                    financial_subtype=financial_subtype,
-                    bank_account=self.bank_account
-                )
-            else:
-                obj = FinancialStatement.objects.filter(
-                    value=FinancialStatement.objects.get(pk=self.pk).value,
-                    financial_subtype=financial_subtype,
-                    bank_account=self.bank_account
-                ).first()
-                if obj:
-                    obj.value = value
+            self.end_balance_active_value = 0
 
+        news_values_in_fields = self.get_changed_fields()
         super().save(*args, **kwargs)
 
+        if news_values_in_fields:
+            news_total_values = self.calculate_news_total_values(news_values_in_fields)
+            for field_name, new_value in zip(news_values_in_fields, news_total_values):
+                setattr(self.financial_class, field_name, new_value)
+            self.financial_class.save()
+
     def __str__(self):
-        return f"{self.bank_account} | {self.financial_subtype}: {self.value}"
+        return f'{self.code} для {self.financial_class}'

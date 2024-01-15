@@ -52,11 +52,35 @@
             {%for bank_account in class.bank_accounts.all%}
             <tr>
                 <td>{{bank_account.code}}</td>
-                {%for financial_statement in bank_account.financial_statements.all%}
-                    <td>{{financial_statement.value}}</td>
-                {% endfor %}
+                <td>{{bank_account.start_balance_active_value}}</td>
+                <td>{{bank_account.start_balance_passive_value}}</td>
+                <td>{{bank_account.turnover_debit_value}}</td>
+                <td>{{bank_account.turnover_credit_value}}</td>
+                <td>{{bank_account.end_balance_active_value}}</td>
+                <td>{{bank_account.end_balance_passive_value}}</td>
+                {% if forloop.last %}
+                <tr>
+                    <td><b>По классу</b></td>
+                    <td><b>{{class.start_balance_active_value}}</td>
+                    <td><b>{{class.start_balance_passive_value}}</td>
+                    <td><b>{{class.turnover_debit_value}}</td>
+                    <td><b>{{class.turnover_credit_value}}</td>
+                    <td><b>{{class.end_balance_active_value}}</td>
+                    <td><b>{{class.end_balance_passive_value}}</td>
+                </tr>
+                {% endif %}
             {% endfor %}
             </tr>
-            
+            {% if forloop.last %}
+                <tr>
+                    <td><b>Баланс</b></td>
+                    <td><b>{{balance_sheet.start_balance_active_value}}</td>
+                    <td><b>{{balance_sheet.start_balance_passive_value}}</td>
+                    <td><b>{{balance_sheet.turnover_debit_value}}</td>
+                    <td><b>{{balance_sheet.turnover_credit_value}}</td>
+                    <td><b>{{balance_sheet.end_balance_active_value}}</td>
+                    <td><b>{{balance_sheet.end_balance_passive_value}}</td>
+                </tr>
+            {% endif %}
         </tr>
         {% endfor %}

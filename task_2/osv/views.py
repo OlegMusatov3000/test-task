@@ -3,6 +3,7 @@ from django.views.decorators.csrf import csrf_exempt
 from django.shortcuts import render, get_object_or_404
 from .models import BalanceSheet
 
+
 @csrf_exempt
 @login_required
 def show_data(request, id):
