@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        table, th, td {
+            border: 1px solid black;
+        }
+        th, td {
+            padding: 10px;
+            text-align: center;
+        }
+        .rub-label {
+            text-align: right;
+        }
+    </style>
+    <title>Оборотная ведомость</title>
+</head>
+<body>
+
+<h2>Название банка - {{balance_sheet.bank.name}}</h2>
+<h3>Оборотная ведомость по балансовым счетам за период с {{balance_sheet.start_period|date:"d.m.Y"}} по {{balance_sheet.end_period|date:"d.m.Y"}} по банку</h3>
+<div class="rub-label">в руб.</div>
+</div>
+<hr>
+
+
+<table>
+    <tr>
+        <th rowspan="2">Б/сч</th>
+        <th colspan="2">ВХОДЯЩЕЕ САЛЬДО</th>
+        <th colspan="2">ОБОРОТЫ</th>
+        <th colspan="2">ИСХОДЯЩЕЕ САЛЬДО</th>
+    </tr>
+    <tr>
+        <th>актив</th>
+        <th>пассив</th>
+        <th>дебет</th>
+        <th>кредит</th>
+        <th>актив</th>
+        <th>пассив</th>
+        {%for class in balance_sheet.financial_classes.all%}
+        <tr>
+            <td colspan="7"><b>Класс {{class.number}} {{class.name}}<b></td>
+        </tr>
+        <tr>
+            {%for bank_account in class.bank_accounts.all%}
+            <tr>
+                <td>{{bank_account.code}}</td>
+                {%for financial_statement in bank_account.financial_statements.all%}
+                    <td>{{financial_statement.value}}</td>
+                {% endfor %}
+            {% endfor %}
+            </tr>
+            
+        </tr>
+        {% endfor %}
