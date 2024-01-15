@@ -1,6 +1,8 @@
+from collections.abc import Collection
 import os
 
 from django.db import models
+from django.core.exceptions import ValidationError
 
 
 class BaseFinancialModel(models.Model):
@@ -35,10 +37,57 @@ class BaseFinancialModel(models.Model):
         abstract = True
 
     def calculate_end_balance_active_value(self):
-        return self.start_balance_active_value + (self.turnover_debit_value - self.turnover_credit_value)
+        return self.start_balance_active_value + (
+                self.turnover_debit_value - self.turnover_credit_value
+            )
 
     def calculate_end_balance_passive_value(self):
-        return self.start_balance_passive_value + (self.turnover_credit_value - self.turnover_debit_value)
+        return self.start_balance_passive_value + (
+                self.turnover_credit_value - self.turnover_debit_value
+            )
+
+    def get_changed_fields(self):
+        if self.pk:
+            prev_obj = self.__class__.objects.get(id=self.pk)
+            return [field.name for field in self._meta.fields if getattr(self, field.name) != getattr(prev_obj, field.name)]
+        return [field.name for field in BaseFinancialModel._meta.fields]
+
+    def calculate_news_total_values(self, news_values_in_fields):
+        if self.__class__ == BankAccount:
+            return [sum(getattr(account, field) for account in self.joint_bank_account.bank_accounts.all()) for field in news_values_in_fields]
+        elif self.__class__ == JointBankAccount:
+            return [sum(getattr(account, field) for account in self.financial_class.joint_bank_accounts.all()) for field in news_values_in_fields]
+        return [sum(getattr(item, field) for item in self.balance_sheet.financial_classes.all()) for field in news_values_in_fields]
+
+    def get_related_model(self):
+        for field in self._meta.fields:
+            if isinstance(field, models.ForeignKey):
+                return getattr(self, field.name)
+
+    def save(self, *args, **kwargs):
+        if self.__class__ == BankAccount:
+            if self.start_balance_active_value != 0:
+                self.end_balance_active_value = (
+                    self.calculate_end_balance_active_value()
+                )
+                self.end_balance_passive_value = 0
+            else:
+                self.end_balance_passive_value = (
+                    self.calculate_end_balance_passive_value()
+                )
+                self.end_balance_active_value = 0
+        if self.__class__ in (BankAccount, JointBankAccount, FinancialClass):
+            news_values_in_fields = self.get_changed_fields()
+            super().save(*args, **kwargs)
+
+            if news_values_in_fields:
+                news_total_values = self.calculate_news_total_values(news_values_in_fields)
+                related_model = self.get_related_model()
+                for field_name, new_value in zip(news_values_in_fields, news_total_values):
+                    setattr(related_model, field_name, new_value)
+                related_model.save()
+        else:
+            super().save(*args, **kwargs)
 
 
 class Bank(models.Model):
@@ -100,16 +149,45 @@ class FinancialClass(BaseFinancialModel):
         ]
 
     def __str__(self):
-        return f'Класс {self.number} {self.name} в {self.balance_sheet}'
+        return f'Класс №{self.number} {self.name} в {self.balance_sheet}'
+
+
+class JointBankAccount(BaseFinancialModel):
+    code = models.CharField(
+        max_length=2, verbose_name="Объединенный код счета"
+    )
+    financial_class = models.ForeignKey(
+        FinancialClass, on_delete=models.CASCADE,
+        verbose_name="Финансовый класс", related_name='joint_bank_accounts'
+    )
+
+    class Meta:
+        verbose_name = "Объединенный банковский счет"
+        verbose_name_plural = "Объединенные банковские счета"
+        ordering = ('financial_class', 'code',)
+        constraints = [
+            models.UniqueConstraint(
+                fields=['code', 'financial_class'],
+                name='uniq_joint_bank_account'
+            )
+        ]
+
+    def full_clean(self, exclude=None, validate_unique=True, validate_constraints=True) -> None:
+        super().full_clean()
+        if self.code[:1] != str(self.financial_class.number):
+            raise ValidationError({'code': 'Первая цифра кода должна совпадать с № класса.'})
+
+    def __str__(self):
+        return f'Объединенный код счета {self.code} для {self.financial_class}'
 
 
 class BankAccount(BaseFinancialModel):
     code = models.CharField(
         max_length=4, verbose_name="Код счета"
     )
-    financial_class = models.ForeignKey(
-        FinancialClass, on_delete=models.CASCADE,
-        verbose_name="Финансовый класс", related_name='bank_accounts'
+    joint_bank_account = models.ForeignKey(
+        JointBankAccount, on_delete=models.CASCADE,
+        verbose_name="Объединенный банковский счет", related_name='bank_accounts'
     )
 
     class Meta:
@@ -118,55 +196,15 @@ class BankAccount(BaseFinancialModel):
         ordering = ('code',)
         constraints = [
             models.UniqueConstraint(
-                fields=['code', 'financial_class'],
+                fields=['code', 'joint_bank_account'],
                 name='uniq_bank_account'
             )
         ]
 
-    def calculate_end_balance_active_value(self):
-        end_balance_active_value = self.start_balance_active_value + (
-                self.turnover_debit_value - self.turnover_credit_value
-            )
-        return end_balance_active_value
-
-    def calculate_end_balance_passive_value(self):
-        end_balance_passive_value = self.start_balance_passive_value + (
-                self.turnover_credit_value - self.turnover_debit_value
-            )
-        return end_balance_passive_value
-
-    def calculate_news_total_values(self, news_values_in_fields):
-        news_total_values = []
-        for field in news_values_in_fields:
-            news_total_values.append(sum(getattr(account, field) for account in self.financial_class.bank_accounts.all()))
-        return news_total_values
-
-    def get_changed_fields(self):
-        if self.pk:
-            prev_obj = BankAccount.objects.get(id=self.pk)
-            return [field.name for field in self._meta.fields if getattr(self, field.name) != getattr(prev_obj, field.name)]
-        return [field.name for field in self._meta.fields if field.name not in ['id', 'code', 'financial_class']]
-
-    def save(self, *args, **kwargs):
-        if self.start_balance_active_value != 0:
-            self.end_balance_active_value = (
-                self.calculate_end_balance_active_value()
-            )
-            self.end_balance_passive_value = 0
-        else:
-            self.end_balance_passive_value = (
-                self.calculate_end_balance_passive_value()
-            )
-            self.end_balance_active_value = 0
-
-        news_values_in_fields = self.get_changed_fields()
-        super().save(*args, **kwargs)
-
-        if news_values_in_fields:
-            news_total_values = self.calculate_news_total_values(news_values_in_fields)
-            for field_name, new_value in zip(news_values_in_fields, news_total_values):
-                setattr(self.financial_class, field_name, new_value)
-            self.financial_class.save()
+    def full_clean(self, exclude=None, validate_unique=True, validate_constraints=True) -> None:
+        super().full_clean()
+        if self.code[:2] != str(self.joint_bank_account.code):
+            raise ValidationError({'code': 'Первые две цифры должны совпадать с объединенным кодом счета.'})
 
     def __str__(self):
-        return f'{self.code} для {self.financial_class}'
+        return f'{self.code} для {self.joint_bank_account}'

@@ -28,8 +28,6 @@
 <div class="rub-label">в руб.</div>
 </div>
 <hr>
-
-
 <table>
     <tr>
         <th rowspan="2">Б/сч</th>
@@ -49,16 +47,30 @@
             <td colspan="7"><b>Класс {{class.number}} {{class.name}}<b></td>
         </tr>
         <tr>
-            {%for bank_account in class.bank_accounts.all%}
-            <tr>
-                <td>{{bank_account.code}}</td>
-                <td>{{bank_account.start_balance_active_value}}</td>
-                <td>{{bank_account.start_balance_passive_value}}</td>
-                <td>{{bank_account.turnover_debit_value}}</td>
-                <td>{{bank_account.turnover_credit_value}}</td>
-                <td>{{bank_account.end_balance_active_value}}</td>
-                <td>{{bank_account.end_balance_passive_value}}</td>
+            {%for joint_bank_account in class.joint_bank_accounts.all%}
+                {%for bank_account in joint_bank_account.bank_accounts.all%}
+                <tr>
+                    <td>{{bank_account.code}}</td>
+                    <td>{{bank_account.start_balance_active_value}}</td>
+                    <td>{{bank_account.start_balance_passive_value}}</td>
+                    <td>{{bank_account.turnover_debit_value}}</td>
+                    <td>{{bank_account.turnover_credit_value}}</td>
+                    <td>{{bank_account.end_balance_active_value}}</td>
+                    <td>{{bank_account.end_balance_passive_value}}</td>
+                </tr>
                 {% if forloop.last %}
+                <tr>
+                    <td><b>{{joint_bank_account.code}}</b></td>
+                    <td><b>{{joint_bank_account.start_balance_active_value}}</b></td>
+                    <td><b>{{joint_bank_account.start_balance_passive_value}}</b></td>
+                    <td><b>{{joint_bank_account.turnover_debit_value}}</b></td>
+                    <td><b>{{joint_bank_account.turnover_credit_value}}</b></td>
+                    <td><b>{{joint_bank_account.end_balance_active_value}}</b></td>
+                    <td><b>{{joint_bank_account.end_balance_passive_value}}</b></td>
+                </tr>
+                {% endif %}
+                {% endfor %}
+            {% if forloop.last %}
                 <tr>
                     <td><b>По классу</b></td>
                     <td><b>{{class.start_balance_active_value}}</td>
@@ -68,7 +80,7 @@
                     <td><b>{{class.end_balance_active_value}}</td>
                     <td><b>{{class.end_balance_passive_value}}</td>
                 </tr>
-                {% endif %}
+            {% endif %}
             {% endfor %}
             </tr>
             {% if forloop.last %}
