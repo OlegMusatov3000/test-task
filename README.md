@@ -115,19 +115,19 @@ cd task_2
 Выполнить миграции:
 
 ```
-python3 manage.py migrate
+python manage.py migrate
 ```
 
 Создать суперпользователя:
 
 ```
-python3 manage.py createsuperuser
+python manage.py createsuperuser
 ```
 
 Запустить проект:
 
 ```
-python3 manage.py runserver
+python manage.py runserver
 ```
 
 **_Ссылка на [админ-зону](http://127.0.0.1:8000/admin/ "Гиперссылка к админке.")_**
