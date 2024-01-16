@@ -6,7 +6,7 @@ from .models import (
     JointBankAccount, BankAccount, BaseFinancialModel
 )
 
-EXCEL_DATE_PATTERN = r'\b\d{2}\.\d{2}\.\d{4}\b'
+EXCEL_DATE_PATTERN = r"\b\d{2}\.\d{2}\.\d{4}\b"
 FINANCIAL_FIELDS = BaseFinancialModel._meta.fields
 
 
@@ -14,8 +14,8 @@ FINANCIAL_FIELDS = BaseFinancialModel._meta.fields
 def parse_excel_dates(date_str):
     matches = re.findall(EXCEL_DATE_PATTERN, date_str)
     start_period_str, end_period_str = matches
-    start_period = datetime.strptime(start_period_str, '%d.%m.%Y')
-    end_period = datetime.strptime(end_period_str, '%d.%m.%Y')
+    start_period = datetime.strptime(start_period_str, "%d.%m.%Y")
+    end_period = datetime.strptime(end_period_str, "%d.%m.%Y")
     return start_period, end_period
 
 
@@ -27,7 +27,7 @@ def create_or_update_balance_sheet(excel_file, bank, start_period, end_period):
         bank=bank,
     )
     balance_sheet.file = excel_file
-    balance_sheet.save(update_fields=['file'])
+    balance_sheet.save(update_fields=["file"])
     return balance_sheet
 
 
@@ -51,7 +51,7 @@ def process_excel_row(
 
 # Функция для обработки строки с классом и создания или обновления класса
 def process_class_row(cell_value, balance_sheet):
-    match = re.search(r'(\d+)\s+(.+)', str(cell_value))
+    match = re.search(r"(\d+)\s+(.+)", str(cell_value))
     if match:
         number = int(match.group(1))
         name = match.group(2)

@@ -15,8 +15,8 @@ START_ROW = 9
 # Представление для отображения данных по балансовому отчету
 @csrf_exempt
 @login_required
-def show_data(request, id, template='osp/show_data.html'):
-    context = {'balance_sheet': get_object_or_404(BalanceSheet, id=id)}
+def show_data(request, id, template="osp/show_data.html"):
+    context = {"balance_sheet": get_object_or_404(BalanceSheet, id=id)}
     return render(request, template, context)
 
 
@@ -24,18 +24,18 @@ def show_data(request, id, template='osp/show_data.html'):
 @csrf_exempt
 @login_required
 def import_data(request):
-    if request.method == 'POST':
-        excel_file = request.FILES['excel_file']
+    if request.method == "POST":
+        excel_file = request.FILES["excel_file"]
 
         try:
             workbook = load_workbook(excel_file)
             sheet = workbook.active
 
             total_rows = sheet.max_row
-            start_period, end_period = parse_excel_dates(sheet['A3'].value)
+            start_period, end_period = parse_excel_dates(sheet["A3"].value)
 
             # Импортируем банк из Excel-файла
-            bank, _ = Bank.objects.get_or_create(name=sheet['A1'].value)
+            bank, _ = Bank.objects.get_or_create(name=sheet["A1"].value)
             # Импортируем ведомость из Excel-файла
             balance_sheet = create_or_update_balance_sheet(
                 excel_file, bank, start_period, end_period
@@ -54,8 +54,8 @@ def import_data(request):
 
             workbook.close()
             messages.success(request, "Данные успешно импортированы.")
-            return redirect('http://127.0.0.1:8000/admin/osv/balancesheet/')
+            return redirect("http://127.0.0.1:8000/admin/osv/balancesheet/")
 
         except Exception as e:
             messages.error(request, f"Ошибка чтения Excel-файла: {e}")
-            return redirect('http://127.0.0.1:8000/admin/osv/balancesheet/')
+            return redirect("http://127.0.0.1:8000/admin/osv/balancesheet/")

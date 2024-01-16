@@ -24,12 +24,12 @@ class BaseFinancialModel(models.Model):
     end_balance_active_value = models.DecimalField(
         verbose_name="Значение: Исходящее сальдо | Актив ",
         max_digits=40, decimal_places=2, default=0,
-        help_text='Расчитывается автоматически после сохранения'
+        help_text="Расчитывается автоматически после сохранения"
     )
     end_balance_passive_value = models.DecimalField(
         verbose_name="Итоговое значение: : Исходящее сальдо | Пассив ",
         max_digits=40, decimal_places=2, default=0,
-        help_text='Расчитывается автоматически после сохранения'
+        help_text="Расчитывается автоматически после сохранения"
     )
 
     class Meta:
@@ -118,14 +118,14 @@ class Bank(models.Model):
 
 
 class BalanceSheet(BaseFinancialModel):
-    start_period = models.DateField('Начало отчета', auto_now=False)
-    end_period = models.DateField('Конец отчета', auto_now=False)
+    start_period = models.DateField("Начало отчета", auto_now=False)
+    end_period = models.DateField("Конец отчета", auto_now=False)
     bank = models.ForeignKey(
         Bank, on_delete=models.CASCADE,
-        verbose_name="Банк", related_name='balance_sheet'
+        verbose_name="Банк", related_name="balance_sheet"
     )
     file = models.FileField(
-        upload_to='balance_sheets/', verbose_name="Файл балансовой ведомости",
+        upload_to="balance_sheets/", verbose_name="Файл балансовой ведомости",
         blank=True, null=True
     )
 
@@ -134,8 +134,8 @@ class BalanceSheet(BaseFinancialModel):
         verbose_name_plural = "Балансовые ведомости"
         constraints = [
             models.UniqueConstraint(
-                fields=['start_period', 'end_period', 'bank'],
-                name='uniq_balance_sheet'
+                fields=["start_period", "end_period", "bank"],
+                name="uniq_balance_sheet"
             )
         ]
 
@@ -148,26 +148,26 @@ class BalanceSheet(BaseFinancialModel):
 
 class FinancialClass(BaseFinancialModel):
 
-    number = models.SmallIntegerField('Номер класса')
+    number = models.SmallIntegerField("Номер класса")
     name = models.CharField(max_length=100, verbose_name="Наименование класса")
     balance_sheet = models.ForeignKey(
         BalanceSheet, on_delete=models.CASCADE,
-        verbose_name="Балансовая ведомость", related_name='financial_classes'
+        verbose_name="Балансовая ведомость", related_name="financial_classes"
     )
 
     class Meta:
         verbose_name = "Финансовый класс"
         verbose_name_plural = "Финансовые классы"
-        ordering = ('balance_sheet', 'number')
+        ordering = ("balance_sheet", "number")
         constraints = [
             models.UniqueConstraint(
-                fields=['number', 'name', 'balance_sheet'],
-                name='uniq_financial_class'
+                fields=["number", "name", "balance_sheet"],
+                name="uniq_financial_class"
             )
         ]
 
     def __str__(self):
-        return f'Класс №{self.number} {self.name} в {self.balance_sheet}'
+        return f"Класс №{self.number} {self.name} в {self.balance_sheet}"
 
 
 class JointBankAccount(BaseFinancialModel):
@@ -176,17 +176,17 @@ class JointBankAccount(BaseFinancialModel):
     )
     financial_class = models.ForeignKey(
         FinancialClass, on_delete=models.CASCADE,
-        verbose_name="Финансовый класс", related_name='joint_bank_accounts'
+        verbose_name="Финансовый класс", related_name="joint_bank_accounts"
     )
 
     class Meta:
         verbose_name = "Объединенный банковский счет"
         verbose_name_plural = "Объединенные банковские счета"
-        ordering = ('financial_class', 'code',)
+        ordering = ("financial_class", "code",)
         constraints = [
             models.UniqueConstraint(
-                fields=['code', 'financial_class'],
-                name='uniq_joint_bank_account'
+                fields=["code", "financial_class"],
+                name="uniq_joint_bank_account"
             )
         ]
 
@@ -196,11 +196,11 @@ class JointBankAccount(BaseFinancialModel):
         super().full_clean()
         if self.code[:1] != str(self.financial_class.number):
             raise ValidationError(
-                {'code': 'Первая цифра кода должна совпадать с № класса.'}
+                {"code": "Первая цифра кода должна совпадать с № класса."}
             )
 
     def __str__(self):
-        return f'Объединенный код счета {self.code} для {self.financial_class}'
+        return f"Объединенный код счета {self.code} для {self.financial_class}"
 
 
 class BankAccount(BaseFinancialModel):
@@ -210,17 +210,17 @@ class BankAccount(BaseFinancialModel):
     joint_bank_account = models.ForeignKey(
         JointBankAccount, on_delete=models.CASCADE,
         verbose_name="Объединенный банковский счет",
-        related_name='bank_accounts'
+        related_name="bank_accounts"
     )
 
     class Meta:
         verbose_name = "Банковский счет"
         verbose_name_plural = "Банковские счета"
-        ordering = ('code',)
+        ordering = ("code",)
         constraints = [
             models.UniqueConstraint(
-                fields=['code', 'joint_bank_account'],
-                name='uniq_bank_account'
+                fields=["code", "joint_bank_account"],
+                name="uniq_bank_account"
             )
         ]
 
@@ -230,9 +230,9 @@ class BankAccount(BaseFinancialModel):
         super().full_clean()
         if self.code[:2] != str(self.joint_bank_account.code):
             raise ValidationError({
-                'code':
-                'Первые две цифры должны совпадать с объединенным кодом счета.'
+                "code":
+                "Первые две цифры должны совпадать с объединенным кодом счета."
             })
 
     def __str__(self):
-        return f'{self.code} для {self.joint_bank_account}'
+        return f"{self.code} для {self.joint_bank_account}"

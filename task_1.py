@@ -20,11 +20,11 @@ POSITIVE_FLOAT_MIN = 1
 POSITIVE_FLOAT_MAX = 20
 STRING_LENGTH = 10
 COUNT_FILES = 10
-LINES_PER_FILE = 1000
-PATTERN_TO_REMOVE = 'abc'
+LINES_PER_FILE = 10000
+PATTERN_TO_REMOVE = "1"
 YEARS_AGO = 5
 DAYS_AGO = 365 * YEARS_AGO
-OUTPUT_FILE = 'merged_output.txt'
+OUTPUT_FILE = "merged_output.txt"
 
 DB_NAME = os.getenv("POSTGRES_DB")
 DB_USER = os.getenv("POSTGRES_USER")
@@ -40,19 +40,19 @@ class DataGenerator:
         end_date = datetime.now()
         start_date = end_date - timedelta(days=DAYS_AGO)
         random_date = start_date + timedelta(days=random.randint(0, DAYS_AGO))
-        return random_date.strftime('%d.%m.%Y')
+        return random_date.strftime("%d.%m.%Y")
 
     @staticmethod
     def generate_random_string(length):
         """Генерирует случайную строку из латинских символов."""
-        return ''.join(random.choice(
+        return "".join(random.choice(
             string.ascii_letters
         ) for _ in range(length))
 
     @staticmethod
     def generate_random_russian_string(length):
         """Генерирует случайную строку из русских символов."""
-        return ''.join(chr(random.randint(
+        return "".join(chr(random.randint(
             0x0410, 0x44F
         )) for _ in range(length))
 
@@ -92,20 +92,20 @@ class FileProcessor:
     @staticmethod
     def generate_and_save_file(file_path, num_lines=LINES_PER_FILE):
         """Генерирует и сохраняет файл с указанным количеством строк."""
-        with open(file_path, 'w', encoding='utf-8') as file:
+        with open(file_path, "w", encoding="utf-8") as file:
             for _ in range(num_lines):
                 line = DataGenerator.generate_random_line()
-                file.write(line + '\n')
+                file.write(line + "\n")
 
     @staticmethod
     def merge_and_remove_strings(counts_files, pattern_to_remove, output_file):
         """Объединяет файлы и удаляет строки с заданным паттерном."""
         total_removed_lines = 0
-        file_paths = [f'file{i}.txt' for i in range(1, counts_files + 1)]
+        file_paths = [f"file{i}.txt" for i in range(1, counts_files + 1)]
 
-        with open(output_file, 'w', encoding='utf-8') as output_file:
+        with open(output_file, "w", encoding="utf-8") as output_file:
             for file_path in file_paths:
-                with open(file_path, 'r', encoding='utf-8') as input_file:
+                with open(file_path, "r", encoding="utf-8") as input_file:
                     lines = input_file.readlines()
 
                     # Удаление строк с заданным паттерном
@@ -117,14 +117,17 @@ class FileProcessor:
                     # Запись оставшихся строк в объединенный файл
                     output_file.writelines(removed_lines)
 
-        print(f"Объединение завершено. Удалено {total_removed_lines} строк.")
+        print(
+            "Объединение завершено."
+            f"Удалено {total_removed_lines} строк с {PATTERN_TO_REMOVE}."
+            )
 
     @classmethod
     def generate_and_save_files_parallel(cls):
         """Генерирует и сохраняет файлы параллельно."""
         with ProcessPoolExecutor() as executor:
             executor.map(cls.generate_and_save_file, [
-                f'file{i}.txt' for i in range(1, COUNT_FILES + 1)
+                f"file{i}.txt" for i in range(1, COUNT_FILES + 1)
             ])
 
 
@@ -145,12 +148,12 @@ class DatabaseManager:
         """Создает таблицу в базе данных."""
         cursor = connection.cursor()
         cursor.execute(
-            '''CREATE TABLE IF NOT EXISTS my_table (
+            """CREATE TABLE IF NOT EXISTS my_table (
             date TEXT,
             latin_chars TEXT,
             russian_chars TEXT,
             even_integer INTEGER,
-            positive_float REAL)'''
+            positive_float REAL)"""
         )
         connection.commit()
         connection.close()
@@ -159,9 +162,9 @@ class DatabaseManager:
     def get_data_from_file():
         """Импортирует данные из файла"""
 
-        with open(OUTPUT_FILE, 'r', encoding='utf-8') as file:
+        with open(OUTPUT_FILE, "r", encoding="utf-8") as file:
             lines = file.readlines()
-            data = [tuple(line.strip().split('||'))[:-1] for line in lines]
+            data = [tuple(line.strip().split("||"))[:-1] for line in lines]
 
         return data
 
@@ -226,7 +229,7 @@ class DatabaseManager:
         return median if not np.isnan(median) else 0
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     # Измерение времени выполнения
     start_program = time.time()
 
@@ -234,7 +237,7 @@ if __name__ == '__main__':
     fp = FileProcessor
     fp.generate_and_save_files_parallel()
 
-    # Объединение файлов и удаление строк с паттерном 'abc'
+    # Объединение файлов и удаление строк с паттерном "abc"
     fp.merge_and_remove_strings(COUNT_FILES, PATTERN_TO_REMOVE, OUTPUT_FILE)
 
     # Импорт данных в базу данных
