@@ -10,6 +10,7 @@ EXCEL_DATE_PATTERN = r'\b\d{2}\.\d{2}\.\d{4}\b'
 FINANCIAL_FIELDS = BaseFinancialModel._meta.fields
 
 
+# Функция для парсинга дат из Excel-строки
 def parse_excel_dates(date_str):
     matches = re.findall(EXCEL_DATE_PATTERN, date_str)
     start_period_str, end_period_str = matches
@@ -18,6 +19,7 @@ def parse_excel_dates(date_str):
     return start_period, end_period
 
 
+# Функция для создания или обновления балансового отчета
 def create_or_update_balance_sheet(excel_file, bank, start_period, end_period):
     balance_sheet, _ = BalanceSheet.objects.get_or_create(
         start_period=start_period,
@@ -29,6 +31,7 @@ def create_or_update_balance_sheet(excel_file, bank, start_period, end_period):
     return balance_sheet
 
 
+# Функция для обработки строки Excel и получения данных для нашей СУБД
 def process_excel_row(
     cell_values, balance_sheet, current_joint_code, current_class
 ):
@@ -46,6 +49,7 @@ def process_excel_row(
     return current_class
 
 
+# Функция для обработки строки с классом и создания или обновления класса
 def process_class_row(cell_value, balance_sheet):
     match = re.search(r'(\d+)\s+(.+)', str(cell_value))
     if match:
@@ -59,6 +63,7 @@ def process_class_row(cell_value, balance_sheet):
         return current_class
 
 
+# Функция для проверки валидности кода
 def is_valid_code(cell_value):
     return (isinstance(cell_value, int) and 1000 <= cell_value <= 9999) or (
         (isinstance(cell_value, str) and len(cell_value) == 4 and (
@@ -66,6 +71,7 @@ def is_valid_code(cell_value):
         )))
 
 
+# Функция для обработки строки с общим кодом и создания или обновления счета
 def process_joint_bank_account(joint_code, current_joint_code, current_class):
     joint_bank_account, _ = JointBankAccount.objects.get_or_create(
         code=joint_code,
@@ -75,13 +81,13 @@ def process_joint_bank_account(joint_code, current_joint_code, current_class):
     return joint_bank_account, current_joint_code
 
 
+# Функция для получения значений для каждого б/сч
 def process_bank_account(cell_values, code, joint_bank_account):
     values_list = cell_values[1:5]
     bank_account_data = {
         field.name: value for field, value in zip(
             FINANCIAL_FIELDS, values_list
         )}
-    print(code)
     BankAccount.objects.get_or_create(
         code=code,
         joint_bank_account=joint_bank_account,

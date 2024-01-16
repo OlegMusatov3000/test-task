@@ -3,7 +3,9 @@ import random
 import time
 import string
 from datetime import datetime, timedelta
-from concurrent.futures import ProcessPoolExecutor, ThreadPoolExecutor, as_completed
+from concurrent.futures import (
+    ProcessPoolExecutor, ThreadPoolExecutor, as_completed
+)
 
 import psycopg2
 import numpy as np
@@ -43,21 +45,29 @@ class DataGenerator:
     @staticmethod
     def generate_random_string(length):
         """Генерирует случайную строку из латинских символов."""
-        return ''.join(random.choice(string.ascii_letters) for _ in range(length))
+        return ''.join(random.choice(
+            string.ascii_letters
+        ) for _ in range(length))
 
     @staticmethod
     def generate_random_russian_string(length):
         """Генерирует случайную строку из русских символов."""
-        return ''.join(chr(random.randint(0x0410, 0x44F)) for _ in range(length))
+        return ''.join(chr(random.randint(
+            0x0410, 0x44F
+        )) for _ in range(length))
 
     @staticmethod
     def generate_random_positive_even_integer():
         """Генерирует случайное положительное четное целочисленное число."""
-        return random.randint(MIN_POSITIVE_EVEN_INTEGER, MAX_POSITIVE_EVEN_INTEGER) * 2
+        return random.randint(
+            MIN_POSITIVE_EVEN_INTEGER, MAX_POSITIVE_EVEN_INTEGER
+        ) * 2
 
     @staticmethod
     def generate_random_positive_float():
-        """Генерирует случайное положительное число с 8 знаками после запятой."""
+        """
+        Генерирует случайное положительное число с 8 знаками после запятой.
+        """
         return round(random.uniform(POSITIVE_FLOAT_MIN, POSITIVE_FLOAT_MAX), 8)
 
     @classmethod
@@ -69,7 +79,13 @@ class DataGenerator:
         even_integer = cls.generate_random_positive_even_integer()
         positive_float = cls.generate_random_positive_float()
 
-        return f"{date}||{latin_chars}||{russian_chars}||{even_integer}||{positive_float}||"
+        return (
+            f"{date}||"
+            f"{latin_chars}||"
+            f"{russian_chars}||"
+            f"{even_integer}||"
+            f"{positive_float}||"
+        )
 
 
 class FileProcessor:
@@ -93,7 +109,9 @@ class FileProcessor:
                     lines = input_file.readlines()
 
                     # Удаление строк с заданным паттерном
-                    removed_lines = [line for line in lines if pattern_to_remove not in line]
+                    removed_lines = [line for line in lines if (
+                        pattern_to_remove not in line
+                    )]
                     total_removed_lines += len(lines) - len(removed_lines)
 
                     # Запись оставшихся строк в объединенный файл
@@ -105,7 +123,9 @@ class FileProcessor:
     def generate_and_save_files_parallel(cls):
         """Генерирует и сохраняет файлы параллельно."""
         with ProcessPoolExecutor() as executor:
-            executor.map(cls.generate_and_save_file, [f'file{i}.txt' for i in range(1, COUNT_FILES + 1)])
+            executor.map(cls.generate_and_save_file, [
+                f'file{i}.txt' for i in range(1, COUNT_FILES + 1)
+            ])
 
 
 class DatabaseManager:
@@ -124,12 +144,14 @@ class DatabaseManager:
     def create_table(connection):
         """Создает таблицу в базе данных."""
         cursor = connection.cursor()
-        cursor.execute('''CREATE TABLE IF NOT EXISTS my_table (
-                          date TEXT,
-                          latin_chars TEXT,
-                          russian_chars TEXT,
-                          even_integer INTEGER,
-                          positive_float REAL)''')
+        cursor.execute(
+            '''CREATE TABLE IF NOT EXISTS my_table (
+            date TEXT,
+            latin_chars TEXT,
+            russian_chars TEXT,
+            even_integer INTEGER,
+            positive_float REAL)'''
+        )
         connection.commit()
         connection.close()
 
@@ -164,7 +186,9 @@ class DatabaseManager:
         connection.close()
 
         with ThreadPoolExecutor() as executor:
-            futures_to_data = {executor.submit(cls.insert_data, d, cls): d for d in data}
+            futures_to_data = {
+                executor.submit(cls.insert_data, d, cls): d for d in data
+            }
             total_lines = len(data)
             processed_lines = 0
 
@@ -175,7 +199,10 @@ class DatabaseManager:
                     future.result()
                 except Exception as e:
                     print(f"Ошибка при вставке данных: {e}")
-                print(f"Строк импортировано: {processed_lines}. Строк осталось:{total_lines - processed_lines}.")
+                print(
+                    f"Строк импортировано: {processed_lines}."
+                    f"Строк осталось:{total_lines - processed_lines}."
+                )
 
     @classmethod
     def sum_of_integers(cls):
