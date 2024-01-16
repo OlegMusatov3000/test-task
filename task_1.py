@@ -1,11 +1,15 @@
+import os
 import random
+import time
 import string
 from datetime import datetime, timedelta
-import time
 from concurrent.futures import ProcessPoolExecutor, ThreadPoolExecutor, as_completed
 
-import sqlite3
+import psycopg2
 import numpy as np
+from dotenv import load_dotenv
+
+load_dotenv()
 
 # Константы для скрипта
 MIN_POSITIVE_EVEN_INTEGER = 1
@@ -19,6 +23,12 @@ PATTERN_TO_REMOVE = 'abc'
 YEARS_AGO = 5
 DAYS_AGO = 365 * YEARS_AGO
 OUTPUT_FILE = 'merged_output.txt'
+
+DB_NAME = os.getenv("POSTGRES_DB")
+DB_USER = os.getenv("POSTGRES_USER")
+DB_PASS = os.getenv("POSTGRES_PASSWORD")
+DB_HOST = os.getenv("DB_HOST")
+DB_PORT = os.getenv("DB_PORT")
 
 
 class DataGenerator:
@@ -102,7 +112,13 @@ class DatabaseManager:
     @staticmethod
     def create_connection():
         """Создает соединение с базой данных."""
-        return sqlite3.connect('my_database.db')
+        return psycopg2.connect(
+            database=DB_NAME,
+            user=DB_USER,
+            password=DB_PASS,
+            host=DB_HOST,
+            port=DB_PORT
+        )
 
     @staticmethod
     def create_table(connection):
@@ -119,7 +135,7 @@ class DatabaseManager:
 
     @staticmethod
     def get_data_from_file():
-        """Получает данные из файла"""
+        """Импортирует данные из файла"""
 
         with open(OUTPUT_FILE, 'r', encoding='utf-8') as file:
             lines = file.readlines()
@@ -132,9 +148,9 @@ class DatabaseManager:
         """Вставляет данные в таблицу."""
         connection = cls.create_connection()
         cursor = connection.cursor()
-        cursor.executemany(
-            "INSERT INTO my_table VALUES (?, ?, ?, ?, ?)",
-            [data]
+        cursor.execute(
+            "INSERT INTO my_table VALUES (%s, %s, %s, %s, %s)",
+            data
         )
         connection.commit()
         connection.close()

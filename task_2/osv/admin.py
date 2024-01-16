@@ -4,12 +4,10 @@ from django.urls import reverse
 from django.utils.html import format_html
 
 from .models import (
-    Bank, BalanceSheet, FinancialClass, JointBankAccount, BankAccount,
+    Bank, BalanceSheet, FinancialClass, JointBankAccount, BankAccount
 )
 
-
 admin.site.unregister(Group)
-
 admin.site.register(Bank)
 
 

@@ -1,0 +1,31 @@
+{% load i18n admin_urls %}
+
+{% block object-tools-items %}
+  {% if has_add_permission %}
+  <li>
+    <script src="https://code.jquery.com/jquery-3.6.4.min.js"></script>
+    <script>
+      $(document).ready(function () {
+        $("#import-excel-button").click(function () {
+          $("#file-input").click();
+        });
+
+        $("#file-input").change(function () {
+          $(this).closest("form").submit();
+        });
+      });
+    </script>
+    <form method="post" enctype="multipart/form-data" action="{% url 'import_data' %}">
+      {% csrf_token %}
+      <input type="file" name="excel_file" id="file-input" accept=".xlsx" style="display: none;">
+      <button type="button" class="btn btn-primary" id="import-excel-button" style="background-image: url(../img/tooltag-add.svg); background-repeat: no-repeat; background-position: right 7px center; padding-right: 26px; float: left; padding: 6px 12px; background: var(--object-tools-bg); color: var(--object-tools-fg); font-weight: 400; font-size: 0.6875rem; text-transform: uppercase; letter-spacing: 0.5px; border-radius: 25px;">Импорт из Excel</button>
+    </form>
+  </li>
+  <li>
+    {% url cl.opts|admin_urlname:'add' as add_url %}
+    <a href="{% add_preserved_filters add_url is_popup to_field %}" class="addlink">
+      {% blocktranslate with cl.opts.verbose_name as name %}Add {{ name }}{% endblocktranslate %}
+    </a>
+  </li>
+  {% endif %}
+{% endblock %}
