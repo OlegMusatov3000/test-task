@@ -203,7 +203,7 @@ class DatabaseManager:
                 except Exception as e:
                     print(f"Ошибка при вставке данных: {e}")
                 print(
-                    f"Строк импортировано: {processed_lines}."
+                    f"Строк импортировано: {processed_lines}. "
                     f"Строк осталось:{total_lines - processed_lines}."
                 )
 
